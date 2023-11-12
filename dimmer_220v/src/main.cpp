@@ -8,8 +8,8 @@
 // ------------------------------CONSTANTES------------------------------
 const int minBrillo = 0;
 const int maxBrillo = 1000;
-const int minDelayCross = 4050; // Para el brillo máximo: Disminuir hasta que se vea una diferencia real entre el brillo en 900 y el brillo en 1000
-const int maxDelayCross = 8100; // Para el brillo mínimo: Aumentar hasta antes del punto donde comienza a haber flicker
+const int minDelayCross = 3500; // Para el brillo máximo: Disminuir hasta antes de que se vea una diferencia entre el brillo en 1000 y el valor anterior
+const int maxDelayCross = 8200; // Para el brillo mínimo: Aumentar hasta antes de que comience a haber flicker
 
 // ------------------------------VARIABLES------------------------------
 int delaySinceCross = 0;
@@ -38,11 +38,11 @@ void setup()
 // ------------------------------LOOP------------------------------
 void loop()
 {
-  // fade(minBrillo, maxBrillo, 10);
-  // delay(5000);
-  // fade(maxBrillo, minBrillo, 10);
-  // delay(5000);
-  readSerial();
+  fade(minBrillo, maxBrillo, 1);
+  delay(1000);
+  fade(maxBrillo, minBrillo, 1);
+  delay(1000);
+  // readSerial();
 }
 
 // ------------------------------DEFINICION DE FUNCIONES------------------------------
@@ -95,7 +95,7 @@ void readSerial()
         Serial.println(serialInput);
       }
     }
-    else if (isDigit(receivedChar)) // Veo si es un número
+    if (isDigit(receivedChar)) // Veo si es un número
     {
       // Append the received character to the serialInput string
       serialInput += receivedChar;
@@ -113,24 +113,28 @@ void setBrillo(int brillo)
 // brillo inicial, brillo final, tiempo en segundos
 void fade(int inicial, int final, float fadeTime)
 {
-  int stepTime = 1000 * fadeTime / abs(final - inicial);
-  if (inicial < final)
+  if (inicial != final)
   {
-    for (int i = inicial; i <= final; i += 1)
+    int stepTime = 1000 * fadeTime / abs(final - inicial);
+    if (inicial < final)
     {
-      Serial.print("fade brillo: ");
-      Serial.println(i);
-      setBrillo(i);
-      delay(stepTime); // fade
+      for (int i = inicial; i <= final; i += 1)
+      {
+        Serial.print("fade brillo: ");
+        Serial.println(i);
+        setBrillo(i);
+        delay(stepTime); // fade
+      }
     }
-  }
-  else if (inicial > final)
-  {
-    for (int i = inicial; i >= final; i -= 1)
+    else
     {
-      Serial.println(i);
-      setBrillo(i);
-      delay(stepTime); // fade
+      for (int i = inicial; i >= final; i -= 1)
+      {
+        Serial.print("fade brillo: ");
+        Serial.println(i);
+        setBrillo(i);
+        delay(stepTime); // fade
+      }
     }
   }
 }
