@@ -1,22 +1,51 @@
-// Librerías
+// ------------------------------LIBRERÍAS------------------------------
 #include <Arduino.h> // Necesaria para Platformio
 
 // Definición de pines
 #define zeroCrossingPin 12
 #define pwmPin 14
 
-// Constantes
+// ------------------------------CONSTANTES------------------------------
 const int minBrillo = 0;
 const int maxBrillo = 1000;
 const int minDelayCross = 4050; // Para el brillo máximo: Disminuir hasta que se vea una diferencia real entre el brillo en 900 y el brillo en 1000
 const int maxDelayCross = 8100; // Para el brillo mínimo: Aumentar hasta antes del punto donde comienza a haber flicker
 
-// Variables
+// ------------------------------VARIABLES------------------------------
 int delaySinceCross = 0;
 String serialInput = "";
 char receivedChar;
-bool newChar;
+bool newChar = false;
 
+// ------------------------------DECLARACIÓN DE FUNCIONES------------------------------
+void ICACHE_RAM_ATTR zeroCrossInt();
+void serialEvent();
+void readSerial();
+void setBrillo(int brillo);
+void fade(int inicial, int final, float fadeTime);
+
+// ------------------------------SETUP------------------------------
+void setup()
+{
+  delay(1000);
+  Serial.begin(115200);
+  Serial.println("\nEncendido");
+  pinMode(pwmPin, OUTPUT);
+  attachInterrupt(zeroCrossingPin, zeroCrossInt, RISING);
+  Serial.onReceive(serialEvent);
+  setBrillo(0);
+}
+// ------------------------------LOOP------------------------------
+void loop()
+{
+  // fade(minBrillo, maxBrillo, 10);
+  // delay(5000);
+  // fade(maxBrillo, minBrillo, 10);
+  // delay(5000);
+  readSerial();
+}
+
+// ------------------------------DEFINICION DE FUNCIONES------------------------------
 void ICACHE_RAM_ATTR zeroCrossInt()
 { // Esta interrupción se ejecuta en el cruce por cero, cada 10mS para 50Hz
   // Cálculo para 50Hz: 1/50=20mS
@@ -46,50 +75,8 @@ void serialEvent()
   receivedChar = Serial.read();
 }
 
-void setBrillo(int brillo)
+void readSerial()
 {
-  delaySinceCross = map(brillo, minBrillo, maxBrillo, maxDelayCross, minDelayCross);
-}
-
-void setup()
-{
-  delay(1000);
-  Serial.begin(115200);
-  Serial.println("\nEncendido");
-  pinMode(pwmPin, OUTPUT);
-  attachInterrupt(zeroCrossingPin, zeroCrossInt, RISING);
-  Serial.onReceive(serialEvent);
-  setBrillo(0);
-}
-// brillo inicial, brillo final, tiempo en segundos
-void fade(int inicial, int final, float fadeTime)
-{
-  int stepTime = 1000 * fadeTime / abs(final - inicial);
-  if (inicial < final)
-  {
-    for (int i = inicial; i <= final; i += 1)
-    {
-      Serial.println(i);
-      setBrillo(i);
-      delay(stepTime); // fade
-    }
-  }
-  else if (inicial > final)
-  {
-    for (int i = inicial; i >= final; i -= 1)
-    {
-      Serial.println(i);
-      setBrillo(i);
-      delay(stepTime); // fade
-    }
-  }
-}
-void loop()
-{
-  // fade(minBrillo, maxBrillo, 10);
-  // delay(5000);
-  // fade(maxBrillo, minBrillo, 10);
-  // delay(5000);
   if (newChar)
   {
     newChar = false;
@@ -115,5 +102,35 @@ void loop()
       Serial.println(serialInput);
     }
   }
-  delay(500);
+  delay(100);
+}
+
+void setBrillo(int brillo)
+{
+  delaySinceCross = map(brillo, minBrillo, maxBrillo, maxDelayCross, minDelayCross);
+}
+
+// brillo inicial, brillo final, tiempo en segundos
+void fade(int inicial, int final, float fadeTime)
+{
+  int stepTime = 1000 * fadeTime / abs(final - inicial);
+  if (inicial < final)
+  {
+    for (int i = inicial; i <= final; i += 1)
+    {
+      Serial.print("fade brillo: ");
+      Serial.println(i);
+      setBrillo(i);
+      delay(stepTime); // fade
+    }
+  }
+  else if (inicial > final)
+  {
+    for (int i = inicial; i >= final; i -= 1)
+    {
+      Serial.println(i);
+      setBrillo(i);
+      delay(stepTime); // fade
+    }
+  }
 }
