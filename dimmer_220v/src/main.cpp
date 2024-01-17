@@ -18,40 +18,38 @@ char receivedChar;
 bool newChar = false;
 
 // ------------------------------DECLARACIÓN DE FUNCIONES------------------------------
-void ICACHE_RAM_ATTR zeroCrossInt();
-void serialEvent();
-void readSerial();
-void setBrillo(int brillo);
-void fade(int inicial, int final, float fadeTime);
+void IRAM_ATTR zeroCrossInt();
+// Serial
+void serialInterrupt();    // Interrupción para recibir datos por serial
+void processSerialInput(); // Procesa los datos recibidos por serial
+// Brillo
+void setBrillo(int val);                           // Setea el brillo
+void fade(int inicial, int final, float fadeTime); // brillo inicial, brillo final, tiempo en segundos
+
+// MQTT
+
+void publicarBrillo(int val);
 
 // ------------------------------SETUP------------------------------
 void setup()
 {
-  delay(1000);
   Serial.begin(115200);
+  delay(5000);
   Serial.println("\nEncendido");
   pinMode(pwmPin, OUTPUT);
   attachInterrupt(zeroCrossingPin, zeroCrossInt, RISING);
-  Serial.onReceive(serialEvent);
+  Serial.onReceive(serialInterrupt);
   setBrillo(0);
 }
 // ------------------------------LOOP------------------------------
 void loop()
 {
-  fade(minBrillo, maxBrillo, 1);
-  delay(1000);
-  fade(maxBrillo, minBrillo, 1);
-  delay(1000);
-  // readSerial();
+  processSerialInput();
 }
 
 // ------------------------------DEFINICION DE FUNCIONES------------------------------
-void ICACHE_RAM_ATTR zeroCrossInt()
-{ // Esta interrupción se ejecuta en el cruce por cero, cada 10mS para 50Hz
-  // Cálculo para 50Hz: 1/50=20mS
-  // Entonces medio ciclo= 10mS = 10000uS
-  //(10000uS - 10uS) / 128 = 75 (aproximadamente), 10uS propagación
-  // (10000uS -10uS) / 1000
+void IRAM_ATTR zeroCrossInt()
+{
   if (delaySinceCross <= minDelayCross)
   {
     digitalWrite(pwmPin, HIGH); // Totalmente prendido
@@ -69,13 +67,13 @@ void ICACHE_RAM_ATTR zeroCrossInt()
   }
 }
 
-void serialEvent()
+void serialInterrupt()
 {
   newChar = true;
   receivedChar = Serial.read();
 }
 
-void readSerial()
+void processSerialInput()
 {
   if (newChar)
   {
@@ -105,9 +103,9 @@ void readSerial()
   delay(100);
 }
 
-void setBrillo(int brillo)
+void setBrillo(int val)
 {
-  delaySinceCross = map(brillo, minBrillo, maxBrillo, maxDelayCross, minDelayCross);
+  delaySinceCross = map(val, minBrillo, maxBrillo, maxDelayCross, minDelayCross);
 }
 
 // brillo inicial, brillo final, tiempo en segundos
@@ -136,5 +134,9 @@ void fade(int inicial, int final, float fadeTime)
         delay(stepTime); // fade
       }
     }
+  }
+  else
+  {
+    setBrillo(final);
   }
 }

@@ -1,0 +1,25 @@
+{
+    "topic": "homeassistant/light/room_light/config",
+    "payload": {
+        "name": "Luz de techo",
+        "unique_id": "room_light",
+        "object_id": "room_light",
+        "icon": "mdi:lightbulb",
+        "schema": "json",
+        "retain": true,
+        "command_topic": "homeassistant/light/room_light/set",
+        "state_topic": "homeassistant/light/room_light/state",
+        "brightness": true,
+        "brightness_command_topic": "homeassistant/light/room_light/brightness/set",
+        "brightness_state_topic": "homeassistant/light/room_light/brightness/state",
+        "brightness_scale": 100,
+        "device": {
+            "identifiers": [
+                "room_light"
+            ],
+            "name": "Room Light",
+            "model": "Light Controller",
+            "manufacturer": "Juan Flores"
+        }
+    }
+}
