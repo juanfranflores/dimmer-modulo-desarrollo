@@ -10,9 +10,6 @@
         "command_topic": "homeassistant/light/room_light/set",
         "state_topic": "homeassistant/light/room_light/state",
         "brightness": true,
-        "brightness_command_topic": "homeassistant/light/room_light/brightness/set",
-        "brightness_state_topic": "homeassistant/light/room_light/brightness/state",
-        "brightness_scale": 100,
         "device": {
             "identifiers": [
                 "room_light"
