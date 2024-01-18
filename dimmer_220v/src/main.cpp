@@ -25,8 +25,9 @@ const char *roomLightSetFeed = "homeassistant/light/room_light/set";
 const char *roomLightStateFeed = "homeassistant/light/room_light/state";
 const char *roomLightIpFeed = "homeassistant/text/room_light/ip";
 const int minBrillo = 0;
-const int maxBrilloReal = 255;
+const int maxBrillo = 255;
 const float defaultFadeTime = 0.5;
+const float maxFadeTime = 300;  // 5 minutos
 const int minDelayCross = 3500; // Para el brillo máximo: Disminuir hasta antes de que se vea una diferencia entre el brillo en 1000 y el valor anterior
 const int maxDelayCross = 8000; // Para el brillo mínimo: Aumentar hasta antes de que comience a haber flicker
 
@@ -170,13 +171,28 @@ void processJson(String json)
   int transition = doc["transition"]; // Extracts value of "transition"
   int brightness = doc["brightness"]; // Extracts value of "brightness"
   setBrillo(brightness, transition);
-
 }
 
 // brillo final, tiempo en segundos
 void setBrillo(int brillo, float fadeTime)
 {
-  if (fadeTime == 0)
+  String json = "";
+  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
+  if (brillo != 0)
+  {
+    if (lastBrillo == 0)
+    { // Hardcodeado para evitar que home assistant lo haga prender con el brillo mínimo
+      brillo = maxBrillo;
+    }
+    json = "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
+  }
+  else
+  {
+    json = "{\"state\":\"OFF\"}";
+  }
+  client.publish(roomLightStateFeed, json.c_str(), true);
+  fadeTime = constrain(fadeTime, 0, maxFadeTime);
+  if (fadeTime == 0 || fadeTime == 5) // 5 es el valor por defecto de home assistant
   {
     fadeTime = defaultFadeTime;
   }
@@ -204,24 +220,14 @@ void setBrillo(int brillo, float fadeTime)
   {
     setDelaySinceCross(brillo);
   }
-  String json = "";
-  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
-  if (brillo != 0)
-  {
-    json = "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
-  }
-  else
-  {
-    json = "{\"state\":\"OFF\"}";
-  }
-  client.publish(roomLightStateFeed, json.c_str(), true);
+
   lastBrillo = brillo;
 }
 
 void setDelaySinceCross(int val)
 {
-  val = constrain(val, minBrillo, maxBrilloReal);
-  delaySinceCross = map(val, minBrillo, maxBrilloReal, maxDelayCross, minDelayCross);
+  val = constrain(val, minBrillo, maxBrillo);
+  delaySinceCross = map(val, minBrillo, maxBrillo, maxDelayCross, minDelayCross);
 }
 
 void IRAM_ATTR zeroCrossInt()
