@@ -5,12 +5,13 @@
         "unique_id": "ceiling_light",
         "object_id": "ceiling_light",
         "icon": "mdi:ceiling-light",
+        "brightness": true,
+        "transition": true,
         "schema": "json",
         "retain": true,
         "availability_topic": "homeassistant/light/ceiling_light/availability",
         "command_topic": "homeassistant/light/ceiling_light/set",
         "state_topic": "homeassistant/light/ceiling_light/state",
-        "brightness": true,
         "device": {
             "identifiers": [
                 "ceiling_light"
