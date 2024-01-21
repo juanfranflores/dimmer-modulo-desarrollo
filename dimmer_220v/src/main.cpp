@@ -19,11 +19,11 @@ const char *password = "Lilas549";
 const char *mqtt_server = "192.168.1.11";
 const char *clientId = "room_light";
 String clientIp = "";
-// const char *roomLightConfigFeed = "homeassistant/light/room_light/config"; // TODO: agregar el config
-// const char *roomLightAvailabilityFeed = "homeassistant/light/room_light/availability"; // TODO: agregar el availability
-const char *roomLightSetFeed = "homeassistant/light/room_light/set";
-const char *roomLightStateFeed = "homeassistant/light/room_light/state";
-const char *roomLightIpFeed = "homeassistant/text/room_light/ip";
+// const char *roomLightConfigTopic = "homeassistant/light/room_light/config"; // TODO: agregar el config
+const char *roomLightAvailabilityTopic = "homeassistant/light/room_light/availability"; // TODO: agregar el availability
+const char *roomLightSetTopic = "homeassistant/light/room_light/set";
+const char *roomLightStateTopic = "homeassistant/light/room_light/state";
+const char *roomLightIpTopic = "homeassistant/text/room_light/ip";
 const int minBrillo = 0;
 const int maxBrillo = 255;
 const float defaultFadeTime = 0.5;
@@ -116,15 +116,16 @@ void reconnect()
   {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(clientId))
+    if (client.connect(clientId, roomLightAvailabilityTopic, 0, true, "offline"))
     {
       Serial.println("connected");
       // Clear retained messages
-      // TODO: Agregar el config y el availability
-      client.publish(roomLightStateFeed, "", true);
-      client.publish(roomLightIpFeed, clientIp.c_str(), true);
+      // TODO: Agregar el config
+      client.publish(roomLightAvailabilityTopic, "online", true);
+      client.publish(roomLightStateTopic, "", true);
+      client.publish(roomLightIpTopic, clientIp.c_str(), true);
       // Subscribe
-      client.subscribe(roomLightSetFeed);
+      client.subscribe(roomLightSetTopic);
     }
     else
     {
@@ -149,7 +150,7 @@ void callback(char *topic, byte *message, unsigned int length)
     messageTemp += (char)message[i];
   }
   Serial.println(messageTemp);
-  if ((String(topic) == roomLightSetFeed))
+  if ((String(topic) == roomLightSetTopic))
   {
     processJson(messageTemp);
   }
@@ -177,10 +178,9 @@ void processJson(String json)
 void setBrillo(int brillo, float fadeTime)
 {
   String json = "";
-  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
   if (brillo != 0)
   {
-    if (lastBrillo == 0)
+    if (brillo == 3 && lastBrillo == 0)
     { // Hardcodeado para evitar que home assistant lo haga prender con el brillo mínimo
       brillo = maxBrillo;
     }
@@ -190,7 +190,7 @@ void setBrillo(int brillo, float fadeTime)
   {
     json = "{\"state\":\"OFF\"}";
   }
-  client.publish(roomLightStateFeed, json.c_str(), true);
+  client.publish(roomLightStateTopic, json.c_str(), true);
   fadeTime = constrain(fadeTime, 0, maxFadeTime);
   if (fadeTime == 0 || fadeTime == 5) // 5 es el valor por defecto de home assistant
   {
@@ -201,6 +201,7 @@ void setBrillo(int brillo, float fadeTime)
     int stepTime = 1000 * fadeTime / abs(brillo - lastBrillo);
     if (lastBrillo < brillo)
     {
+      // TODO: Agregar bandera de mensaje entrante para cortar el fade.
       for (int i = lastBrillo; i <= brillo; i += 1)
       {
         setDelaySinceCross(i);
@@ -220,7 +221,7 @@ void setBrillo(int brillo, float fadeTime)
   {
     setDelaySinceCross(brillo);
   }
-
+  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
   lastBrillo = brillo;
 }
 
