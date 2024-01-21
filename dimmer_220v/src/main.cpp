@@ -35,6 +35,9 @@ const int maxDelayCross = 8000; // Para el brillo mínimo: Aumentar hasta antes 
 
 int delaySinceCross = 0;
 int lastBrillo = 0;
+int targetBrillo = 0;
+int stepTime = 0;
+unsigned long previousMillis = 0; // will store the last time the light was updated
 
 // ----------------------Inicialización de librerías----------------------
 WebServer server(80);
@@ -75,6 +78,20 @@ void loop()
   server.handleClient();
   ElegantOTA.loop();
   client.loop();
+  if (millis() - previousMillis >= stepTime)
+  {
+    if (lastBrillo < targetBrillo)
+    {
+      lastBrillo++;
+      setDelaySinceCross(lastBrillo);
+    }
+    else if (lastBrillo > targetBrillo)
+    {
+      lastBrillo--;
+      setDelaySinceCross(lastBrillo);
+    }
+    previousMillis = millis();
+  }
 }
 
 // ------------------------------DEFINICION DE FUNCIONES------------------------------
@@ -190,21 +207,14 @@ void processJson(String json)
 
 void setBrillo(int brillo, float fadeTime) // brillo final, tiempo en segundos
 {
-  // brillo = (lastBrillo == 0) ? maxBrillo : constrain(brillo, minBrillo, maxBrillo);
   brillo = constrain(brillo, minBrillo, maxBrillo);
   String json = (brillo == 0) ? "{\"state\":\"OFF\"}" : "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
   client.publish(ceilingLightStateTopic, json.c_str(), true);
   Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
 
   fadeTime = (fadeTime == 0 || fadeTime == 5) ? defaultFadeTime : constrain(fadeTime, 0, maxFadeTime);
-  int stepTime = (brillo == lastBrillo) ? 0 : 1000 * fadeTime / abs(brillo - lastBrillo);
-  int increment = (lastBrillo <= brillo) ? 1 : -1;
-  for (int i = lastBrillo; (increment > 0 ? i <= brillo : i >= brillo); i += increment)
-  {
-    setDelaySinceCross(i);
-    delay(stepTime); // fade
-  }
-  lastBrillo = brillo;
+  stepTime = (brillo == lastBrillo) ? 0 : 1000 * fadeTime / abs(brillo - lastBrillo); // calculate the time between brightness steps
+  targetBrillo = brillo;                                                              // set the target brightness
 }
 
 void setDelaySinceCross(int val)
