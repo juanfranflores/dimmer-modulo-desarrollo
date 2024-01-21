@@ -17,13 +17,13 @@
 const char *ssid = "Flores 2.4GHz";
 const char *password = "Lilas549";
 const char *mqtt_server = "192.168.1.11";
-const char *clientId = "room_light";
+const char *clientId = "ceiling_light";
 String clientIp = "";
-// const char *roomLightConfigTopic = "homeassistant/light/room_light/config"; // TODO: agregar el config
-const char *roomLightAvailabilityTopic = "homeassistant/light/room_light/availability"; // TODO: agregar el availability
-const char *roomLightSetTopic = "homeassistant/light/room_light/set";
-const char *roomLightStateTopic = "homeassistant/light/room_light/state";
-const char *roomLightIpTopic = "homeassistant/text/room_light/ip";
+// const char *ceilingLightConfigTopic = "homeassistant/light/ceiling_light/config"; // TODO: agregar el config
+const char *ceilingLightAvailabilityTopic = "homeassistant/light/ceiling_light/availability"; // TODO: agregar el availability
+const char *ceilingLightSetTopic = "homeassistant/light/ceiling_light/set";
+const char *ceilingLightStateTopic = "homeassistant/light/ceiling_light/state";
+const char *ceilingLightIpTopic = "homeassistant/text/ceiling_light/ip";
 const int minBrillo = 0;
 const int maxBrillo = 255;
 const float defaultFadeTime = 0.5;
@@ -116,16 +116,16 @@ void reconnect()
   {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(clientId, roomLightAvailabilityTopic, 0, true, "offline"))
+    if (client.connect(clientId, ceilingLightAvailabilityTopic, 0, true, "offline"))
     {
       Serial.println("connected");
       // Clear retained messages
       // TODO: Agregar el config
-      client.publish(roomLightAvailabilityTopic, "online", true);
-      client.publish(roomLightStateTopic, "", true);
-      client.publish(roomLightIpTopic, clientIp.c_str(), true);
+      client.publish(ceilingLightAvailabilityTopic, "online", true);
+      client.publish(ceilingLightStateTopic, "", true);
+      client.publish(ceilingLightIpTopic, clientIp.c_str(), true);
       // Subscribe
-      client.subscribe(roomLightSetTopic);
+      client.subscribe(ceilingLightSetTopic);
     }
     else
     {
@@ -150,7 +150,7 @@ void callback(char *topic, byte *message, unsigned int length)
     messageTemp += (char)message[i];
   }
   Serial.println(messageTemp);
-  if ((String(topic) == roomLightSetTopic))
+  if ((String(topic) == ceilingLightSetTopic))
   {
     processJson(messageTemp);
   }
@@ -171,14 +171,30 @@ void processJson(String json)
   String state = doc["state"];        // Extracts value of "state"
   int transition = doc["transition"]; // Extracts value of "transition"
   int brightness = doc["brightness"]; // Extracts value of "brightness"
+  /*
+  casos posibles:
+  1. state = ON y brightness == 0 -> brightness = maxBrillo
+  2. state = ON y brightness != 0 -> brightness = brightness
+  2. state = OFF                  -> brightness =0
+  */
+  if (state == "ON" && brightness == 0)
+  {
+    brightness = maxBrillo;
+  }
+  else if (state == "OFF")
+  {
+    brightness = 0;
+  }
   setBrillo(brightness, transition);
 }
 
 void setBrillo(int brillo, float fadeTime) // brillo final, tiempo en segundos
 {
-  brillo = (brillo == 3 && lastBrillo == 0) ? maxBrillo : constrain(brillo, minBrillo, maxBrillo);
+  // brillo = (lastBrillo == 0) ? maxBrillo : constrain(brillo, minBrillo, maxBrillo);
+  brillo = constrain(brillo, minBrillo, maxBrillo);
   String json = (brillo == 0) ? "{\"state\":\"OFF\"}" : "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
-  client.publish(roomLightStateTopic, json.c_str(), true);
+  client.publish(ceilingLightStateTopic, json.c_str(), true);
+  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
 
   fadeTime = (fadeTime == 0 || fadeTime == 5) ? defaultFadeTime : constrain(fadeTime, 0, maxFadeTime);
   int stepTime = (brillo == lastBrillo) ? 0 : 1000 * fadeTime / abs(brillo - lastBrillo);
@@ -188,8 +204,6 @@ void setBrillo(int brillo, float fadeTime) // brillo final, tiempo en segundos
     setDelaySinceCross(i);
     delay(stepTime); // fade
   }
-
-  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
   lastBrillo = brillo;
 }
 

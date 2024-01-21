@@ -1,21 +1,21 @@
 {
-    "topic": "homeassistant/light/room_light/config",
+    "topic": "homeassistant/light/ceiling_light/config",
     "payload": {
         "name": "Luz de techo",
-        "unique_id": "room_light",
-        "object_id": "room_light",
-        "icon": "mdi:lightbulb",
+        "unique_id": "ceiling_light",
+        "object_id": "ceiling_light",
+        "icon": "mdi:ceiling-light",
         "schema": "json",
         "retain": true,
-        "availability_topic": "homeassistant/light/room_light/availability",
-        "command_topic": "homeassistant/light/room_light/set",
-        "state_topic": "homeassistant/light/room_light/state",
+        "availability_topic": "homeassistant/light/ceiling_light/availability",
+        "command_topic": "homeassistant/light/ceiling_light/set",
+        "state_topic": "homeassistant/light/ceiling_light/state",
         "brightness": true,
         "device": {
             "identifiers": [
-                "room_light"
+                "ceiling_light"
             ],
-            "name": "Room Light",
+            "name": "Ceiling Light",
             "model": "Light Controller",
             "manufacturer": "Juan Flores"
         }
