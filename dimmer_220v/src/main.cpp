@@ -63,7 +63,7 @@ void setup()
   client.setCallback(callback);
   reconnect();
   attachInterrupt(digitalPinToInterrupt(zeroCrossingPin), zeroCrossInt, RISING);
-  setBrillo(0, 0);
+  setBrillo(0, 0); // cambiar por newBrillo=0 y newBrilloFlag=true
 }
 // ------------------------------LOOP------------------------------
 void loop()
@@ -174,53 +174,21 @@ void processJson(String json)
   setBrillo(brightness, transition);
 }
 
-// brillo final, tiempo en segundos
-void setBrillo(int brillo, float fadeTime)
+void setBrillo(int brillo, float fadeTime) // brillo final, tiempo en segundos
 {
-  String json = "";
-  if (brillo != 0)
-  {
-    if (brillo == 3 && lastBrillo == 0)
-    { // Hardcodeado para evitar que home assistant lo haga prender con el brillo mínimo
-      brillo = maxBrillo;
-    }
-    json = "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
-  }
-  else
-  {
-    json = "{\"state\":\"OFF\"}";
-  }
+  brillo = (brillo == 3 && lastBrillo == 0) ? maxBrillo : constrain(brillo, minBrillo, maxBrillo);
+  String json = (brillo == 0) ? "{\"state\":\"OFF\"}" : "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
   client.publish(roomLightStateTopic, json.c_str(), true);
-  fadeTime = constrain(fadeTime, 0, maxFadeTime);
-  if (fadeTime == 0 || fadeTime == 5) // 5 es el valor por defecto de home assistant
+
+  fadeTime = (fadeTime == 0 || fadeTime == 5) ? defaultFadeTime : constrain(fadeTime, 0, maxFadeTime);
+  int stepTime = (brillo == lastBrillo) ? 0 : 1000 * fadeTime / abs(brillo - lastBrillo);
+  int increment = (lastBrillo <= brillo) ? 1 : -1;
+  for (int i = lastBrillo; (increment > 0 ? i <= brillo : i >= brillo); i += increment)
   {
-    fadeTime = defaultFadeTime;
+    setDelaySinceCross(i);
+    delay(stepTime); // fade
   }
-  if (brillo != lastBrillo)
-  {
-    int stepTime = 1000 * fadeTime / abs(brillo - lastBrillo);
-    if (lastBrillo < brillo)
-    {
-      // TODO: Agregar bandera de mensaje entrante para cortar el fade.
-      for (int i = lastBrillo; i <= brillo; i += 1)
-      {
-        setDelaySinceCross(i);
-        delay(stepTime); // fade
-      }
-    }
-    else
-    {
-      for (int i = lastBrillo; i >= brillo; i -= 1)
-      {
-        setDelaySinceCross(i);
-        delay(stepTime); // fade
-      }
-    }
-  }
-  else
-  {
-    setDelaySinceCross(brillo);
-  }
+
   Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
   lastBrillo = brillo;
 }
