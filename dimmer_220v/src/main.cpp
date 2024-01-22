@@ -32,8 +32,7 @@ const int minDelayCross = 3500; // Para el brillo máximo: Disminuir hasta antes
 const int maxDelayCross = 8000; // Para el brillo mínimo: Aumentar hasta antes de que comience a haber flicker
 
 // ------------------------------VARIABLES------------------------------
-
-int delaySinceCross = 0;
+int delaySinceCross = maxDelayCross;
 int lastBrillo = 0;
 int targetBrillo = 0;
 int stepTime = 0;
@@ -51,7 +50,7 @@ void reconnect();
 void callback(char *topic, byte *message, unsigned int length);
 void processJson(String json);
 void IRAM_ATTR zeroCrossInt();
-void setDelaySinceCross(int val);           // Setea el brillo
+void setDelayConBrillo(int val);            // Setea el brillo
 void setBrillo(int brillo, float fadeTime); // brillo final, tiempo en segundos
 
 // ------------------------------SETUP------------------------------
@@ -66,7 +65,8 @@ void setup()
   client.setCallback(callback);
   reconnect();
   attachInterrupt(digitalPinToInterrupt(zeroCrossingPin), zeroCrossInt, RISING);
-  setBrillo(0, 0); // cambiar por newBrillo=0 y newBrilloFlag=true
+  targetBrillo = minBrillo;
+  setDelayConBrillo(minBrillo); // Para que se apague al principio
 }
 // ------------------------------LOOP------------------------------
 void loop()
@@ -83,12 +83,12 @@ void loop()
     if (lastBrillo < targetBrillo)
     {
       lastBrillo++;
-      setDelaySinceCross(lastBrillo);
+      setDelayConBrillo(lastBrillo);
     }
     else if (lastBrillo > targetBrillo)
     {
       lastBrillo--;
-      setDelaySinceCross(lastBrillo);
+      setDelayConBrillo(lastBrillo);
     }
     previousMillis = millis();
   }
@@ -182,7 +182,6 @@ void processJson(String json)
   if (error)
   {
     Serial.println(F("Failed to read JSON"));
-    setDelaySinceCross(0);
     return;
   }
   String state = doc["state"];        // Extracts value of "state"
@@ -200,7 +199,7 @@ void processJson(String json)
   }
   else if (state == "OFF")
   {
-    brightness = 0;
+    brightness = minBrillo;
   }
   setBrillo(brightness, transition);
 }
@@ -210,14 +209,14 @@ void setBrillo(int brillo, float fadeTime) // brillo final, tiempo en segundos
   brillo = constrain(brillo, minBrillo, maxBrillo);
   String json = (brillo == 0) ? "{\"state\":\"OFF\"}" : "{\"state\":\"ON\",\"brightness\":" + String(brillo) + "}";
   client.publish(ceilingLightStateTopic, json.c_str(), true);
-  Serial.printf("Brillo: %d.\nDelay since cross: %d.\n", brillo, delaySinceCross);
+  Serial.printf("Brillo: %d.\n", brillo);
 
   fadeTime = (fadeTime == 0 || fadeTime == 5) ? defaultFadeTime : constrain(fadeTime, 0, maxFadeTime);
   stepTime = (brillo == lastBrillo) ? 0 : 1000 * fadeTime / abs(brillo - lastBrillo); // calculate the time between brightness steps
   targetBrillo = brillo;                                                              // set the target brightness
 }
 
-void setDelaySinceCross(int val)
+void setDelayConBrillo(int val)
 {
   val = constrain(val, minBrillo, maxBrillo);
   delaySinceCross = map(val, minBrillo, maxBrillo, maxDelayCross, minDelayCross);
