@@ -1,5 +1,5 @@
 // ------------------------------LIBRERÍAS------------------------------
-#include <Arduino.h> // Necesaria para Platformio
+#include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
 #include <WiFi.h>
@@ -44,9 +44,10 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 // ------------------------------DECLARACIÓN DE FUNCIONES------------------------------
+void setup_serial();
 void setup_wifi();
 void setup_mqtt();
-void reconnect();
+void connect();
 void callback(char *topic, byte *message, unsigned int length);
 void processJson(String json);
 void IRAM_ATTR zeroCrossInt();
@@ -56,14 +57,11 @@ void setBrillo(int brillo, float fadeTime); // brillo final, tiempo en segundos
 // ------------------------------SETUP------------------------------
 void setup()
 {
-  Serial.begin(115200);
-  delay(2000);
-  Serial.println("\nEncendido");
+  setup_serial();
   pinMode(pwmPin, OUTPUT);
   setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-  reconnect();
+  setup_mqtt();
+  connect();
   attachInterrupt(digitalPinToInterrupt(zeroCrossingPin), zeroCrossInt, RISING);
   targetBrillo = minBrillo;
   setDelayConBrillo(minBrillo); // Para que se apague al principio
@@ -73,7 +71,7 @@ void loop()
 {
   if (!client.connected())
   {
-    reconnect();
+    connect();
   }
   server.handleClient();
   ElegantOTA.loop();
@@ -95,6 +93,12 @@ void loop()
 }
 
 // ------------------------------DEFINICION DE FUNCIONES------------------------------
+void setup_serial()
+{
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("\nEncendido.");
+}
 void setup_wifi()
 {
   delay(10);
@@ -109,10 +113,10 @@ void setup_wifi()
     delay(500);
     Serial.print(".");
   }
-  clientIp = WiFi.localIP().toString() + "/update";
   Serial.println("");
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
+  clientIp = WiFi.localIP().toString();
   Serial.println(clientIp);
 
   server.on("/",
@@ -125,10 +129,14 @@ void setup_wifi()
   server.begin();
   Serial.println("HTTP server started");
 }
-
-void reconnect()
+void setup_mqtt()
 {
-  // Loop until we're reconnected
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+void connect()
+{
+  // Loop until we're connected
   while (!client.connected())
   {
     Serial.print("Attempting MQTT connection...");
